@@ -1,35 +1,19 @@
-body {
-    font-family: sans-serif;
+#response-wrapper {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 50px;
-}
-.search-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-input {
-    padding: 8px;
-    width: 300px;
-}
-button {
-    padding: 8px 12px;
-}
-#results-container {
+    flex-direction: row;
+    width: 90%;
+    gap: 30px;
     margin-top: 20px;
-    width: 80%;
 }
-.result-item {
-    border-bottom: 1px solid #ccc;
-    padding: 10px 0;
+
+#results-container {
+    flex: 2; /* Takes up 2/3 of the space */
+    width: 100%;
+    margin-top: 0;
 }
-.result-title {
-    font-size: 1.2em;
-    font-weight: bold;
-}
-.result-link {
-    color: #007bff;
-    text-decoration: none;
+
+#answer-container {
+    flex: 1; /* Takes up 1/3 of the space */
+    border-left: 1px solid #ccc;
+    padding-left: 30px;
 }

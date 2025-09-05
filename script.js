@@ -7,10 +7,11 @@ document.getElementById('search-form').addEventListener('submit', function(e) {
     }
 
     const resultsContainer = document.getElementById('results-container');
+    const answerContainer = document.getElementById('answer-container');
     resultsContainer.innerHTML = '<h2>Searching...</h2>';
+    answerContainer.innerHTML = ''; // Clear previous answer
 
-    // Make sure you have your n8n Production URL here
-    const n8nWebhookUrl = 'https://martong.app.n8n.cloud/webhook-test/744802d0-09f3-4726-b8c2-d48e9f23c2d9';
+    const n8nWebhookUrl = 'PASTE_YOUR_N8N_WEBHOOK_URL_HERE';
 
     fetch(n8nWebhookUrl, {
         method: 'POST',
@@ -22,20 +23,24 @@ document.getElementById('search-form').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         resultsContainer.innerHTML = '';
+        answerContainer.innerHTML = '';
 
-        if (data && data.length > 0) {
+        // Populate the generated answer on the right
+        if (data && data.generatedAnswer) {
+            answerContainer.innerHTML = `<h2>Generated Answer:</h2><p>${data.generatedAnswer}</p>`;
+        }
+
+        // Populate the search results on the left
+        if (data && data.searchResults && data.searchResults.length > 0) {
             resultsContainer.innerHTML = '<h2>Search Results:</h2>';
-            data.forEach(item => {
-                // The useful information is inside the 'document' object
+            data.searchResults.forEach(item => {
                 const result = item.document;
                 const resultItem = document.createElement('div');
                 resultItem.classList.add('result-item');
 
-                // **CHANGE 1**: Get title/link from 'derivedStructData'
                 const title = result.derivedStructData.title || 'No Title';
                 const link = result.derivedStructData.link || '#';
                 
-                // **CHANGE 2**: Removed snippet as it is not in the data
                 resultItem.innerHTML = `
                     <p class="result-title"><a href="${link}" class="result-link" target="_blank">${title}</a></p>
                 `;
