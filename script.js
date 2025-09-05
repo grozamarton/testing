@@ -9,31 +9,49 @@ document.getElementById('search-form').addEventListener('submit', function(e) {
     const resultsContainer = document.getElementById('results-container');
     resultsContainer.innerHTML = '<h2>Searching...</h2>'; // Show a loading message
 
-    // This is the URL of your n8n webhook. YOU NEED TO REPLACE THIS.
-    const n8nWebhookUrl = 'YOUR_N8N_WEBHOOK_URL_HERE';
+    // Make sure you replace this placeholder with your actual n8n Production URL
+    const n8nWebhookUrl = 'PASTE_YOUR_N8N_WEBHOOK_URL_HERE';
 
-    // Make the request to your n8n workflow
-    fetch(`${n8nWebhookUrl}?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            // Check if the response is valid and has results
-            if (data && data.results && data.results.length > 0) {
-                resultsContainer.innerHTML = '<h2>Search Results:</h2>';
-                data.results.forEach(result => {
-                    const resultItem = document.createElement('div');
-                    resultItem.classList.add('result-item');
-                    resultItem.innerHTML = `
-                        <p class="result-title"><a href="${result.link}" class="result-link" target="_blank">${result.title}</a></p>
-                        <p>${result.snippet}</p>
-                    `;
-                    resultsContainer.appendChild(resultItem);
-                });
-            } else {
-                resultsContainer.innerHTML = '<h2>No results found.</h2>';
-            }
-        })
-        .catch(error => {
-            resultsContainer.innerHTML = '<h2>An error occurred. Please try again.</h2>';
-            console.error('Error:', error);
-        });
+    // Make the POST request to your n8n workflow
+    fetch(n8nWebhookUrl, {
+        method: 'POST', // Use the POST method
+        headers: {
+            'Content-Type': 'application/json', // Tell the server we are sending JSON
+        },
+        body: JSON.stringify({ query: query }) // Send the query in the body as JSON
+    })
+    .then(response => response.json())
+    .then(data => {
+        resultsContainer.innerHTML = ''; // Clear the "Searching..." message
+
+        // The API returns an array of result items. Check if the array is not empty.
+        if (data && data.length > 0) {
+            resultsContainer.innerHTML = '<h2>Search Results:</h2>';
+            // Loop through the data array directly
+            data.forEach(item => {
+                // The useful information is inside the 'document' object
+                const result = item.document;
+                const resultItem = document.createElement('div');
+                resultItem.classList.add('result-item');
+
+                // Get the title and link from the 'structData' property
+                const title = result.structData.title || 'No Title';
+                const link = result.structData.link || '#';
+                // Get the description from the 'snippets' array
+                const snippet = (result.snippets && result.snippets.length > 0) ? result.snippets[0].snippet : 'No snippet available.';
+
+                resultItem.innerHTML = `
+                    <p class="result-title"><a href="${link}" class="result-link" target="_blank">${title}</a></p>
+                    <p>${snippet}</p>
+                `;
+                resultsContainer.appendChild(resultItem);
+            });
+        } else {
+            resultsContainer.innerHTML = '<h2>No results found.</h2>';
+        }
+    })
+    .catch(error => {
+        resultsContainer.innerHTML = '<h2>An error occurred. Please try again.</h2>';
+        console.error('Error:', error);
+    });
 });
