@@ -11,7 +11,7 @@ document.getElementById('search-form').addEventListener('submit', function(e) {
     resultsContainer.innerHTML = '<h2>Searching...</h2>';
     answerContainer.innerHTML = ''; // Clear previous answer
 
-    const n8nWebhookUrl = 'PASTE_YOUR_N8N_WEBHOOK_URL_HERE';
+    const n8nWebhookUrl = 'https://martong.app.n8n.cloud/webhook-test/744802d0-09f3-4726-b8c2-d48e9f23c2d9';
 
     fetch(n8nWebhookUrl, {
         method: 'POST',
