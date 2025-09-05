@@ -1,0 +1,35 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 50px;
+}
+.search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+input {
+    padding: 8px;
+    width: 300px;
+}
+button {
+    padding: 8px 12px;
+}
+#results-container {
+    margin-top: 20px;
+    width: 80%;
+}
+.result-item {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 0;
+}
+.result-title {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+.result-link {
+    color: #007bff;
+    text-decoration: none;
+}
