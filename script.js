@@ -1,48 +1,43 @@
 document.getElementById('search-form').addEventListener('submit', function(e) {
-    e.preventDefault(); // Prevents the form from submitting and reloading the page
+    e.preventDefault();
 
     const query = document.getElementById('search-input').value;
     if (!query) {
-        return; // Don't do anything if the input is empty
+        return;
     }
 
     const resultsContainer = document.getElementById('results-container');
-    resultsContainer.innerHTML = '<h2>Searching...</h2>'; // Show a loading message
+    resultsContainer.innerHTML = '<h2>Searching...</h2>';
 
-    // Make sure you replace this placeholder with your actual n8n Production URL
+    // Make sure you have your n8n Production URL here
     const n8nWebhookUrl = 'https://martong.app.n8n.cloud/webhook-test/744802d0-09f3-4726-b8c2-d48e9f23c2d9';
 
-    // Make the POST request to your n8n workflow
     fetch(n8nWebhookUrl, {
-        method: 'POST', // Use the POST method
+        method: 'POST',
         headers: {
-            'Content-Type': 'application/json', // Tell the server we are sending JSON
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: query }) // Send the query in the body as JSON
+        body: JSON.stringify({ query: query })
     })
     .then(response => response.json())
     .then(data => {
-        resultsContainer.innerHTML = ''; // Clear the "Searching..." message
+        resultsContainer.innerHTML = '';
 
-        // The API returns an array of result items. Check if the array is not empty.
         if (data && data.length > 0) {
             resultsContainer.innerHTML = '<h2>Search Results:</h2>';
-            // Loop through the data array directly
             data.forEach(item => {
                 // The useful information is inside the 'document' object
                 const result = item.document;
                 const resultItem = document.createElement('div');
                 resultItem.classList.add('result-item');
 
-                // Get the title and link from the 'structData' property
-                const title = result.structData.title || 'No Title';
-                const link = result.structData.link || '#';
-                // Get the description from the 'snippets' array
-                const snippet = (result.snippets && result.snippets.length > 0) ? result.snippets[0].snippet : 'No snippet available.';
-
+                // **CHANGE 1**: Get title/link from 'derivedStructData'
+                const title = result.derivedStructData.title || 'No Title';
+                const link = result.derivedStructData.link || '#';
+                
+                // **CHANGE 2**: Removed snippet as it is not in the data
                 resultItem.innerHTML = `
                     <p class="result-title"><a href="${link}" class="result-link" target="_blank">${title}</a></p>
-                    <p>${snippet}</p>
                 `;
                 resultsContainer.appendChild(resultItem);
             });
