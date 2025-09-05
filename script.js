@@ -10,7 +10,7 @@ document.getElementById('search-form').addEventListener('submit', function(e) {
     resultsContainer.innerHTML = '<h2>Searching...</h2>'; // Show a loading message
 
     // Make sure you replace this placeholder with your actual n8n Production URL
-    const n8nWebhookUrl = 'PASTE_YOUR_N8N_WEBHOOK_URL_HERE';
+    const n8nWebhookUrl = 'https://martong.app.n8n.cloud/webhook-test/744802d0-09f3-4726-b8c2-d48e9f23c2d9';
 
     // Make the POST request to your n8n workflow
     fetch(n8nWebhookUrl, {
