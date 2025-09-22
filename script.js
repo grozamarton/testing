@@ -1,5 +1,4 @@
 (() => {
-  // --- Elements
   const form = document.getElementById('search-form');
   const input = document.getElementById('search-input');
   const resultsContainer = document.getElementById('results-container');
@@ -13,90 +12,113 @@
   const FETCH_TIMEOUT_MS = 20000;
 
   // --- Helpers
-  const esc = (s) => String(s ?? '').replace(/[&<>\"']/g, m => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[m]));
 
-  const uniqBy = (arr, keyFn) => {
-    const seen = new Set();
-    const out = [];
-    for (const x of arr || []) {
-      const k = keyFn(x);
-      if (!k || seen.has(k)) continue;
-      seen.add(k); out.push(x);
+  // Normalize a Discovery Engine result into {title, link, snippet}
+  function normalizeResult(raw, idx) {
+    const doc = raw?.document || {};
+    const ds = doc.derivedStructData || {};
+    const sd = doc.structData || {};
+    const title = raw?.title || ds.title || sd.title || doc.title || `Result ${idx + 1}`;
+    const link = raw?.uri || ds.link || ds.url || sd.link || sd.url || '';
+    let snippet = raw?.snippet;
+    if (!snippet && Array.isArray(raw?.snippetInfo)) {
+      const ok = raw.snippetInfo.find(s => s?.snippetStatus === 'SUCCESS' && s.snippet);
+      snippet = ok?.snippet || '';
     }
-    return out;
-  };
-
-  const withTimeout = (ms, promise) => {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), ms);
-    return Promise.race([
-      promise(ctrl.signal).finally(() => clearTimeout(t)),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms + 10))
-    ]);
-  };
-
-  // --- Rendering
-  function resultCard(r) {
-    const title = r.title || r.uri || 'Source';
-    const uri = r.uri || r.link || '#';
-    const snippet = r.snippet || r.content || '';
-    return `
-      <article class="result">
-        <h3 class="result-title"><a href="${esc(uri)}" target="_blank" rel="noopener">${esc(title)}</a></h3>
-        ${snippet ? `<p class="snippet">${esc(snippet)}</p>` : ''}
-        <div class="result-url">${esc(uri)}</div>
-      </article>
-    `;
+    snippet = snippet || ds.snippet || sd.snippet || '';
+    return { title, link, snippet };
   }
 
-  function normalizeReferences(references) {
-    // Fallback when server doesn't send answerSources
-    const srcs = (references || []).map(r => {
-      const ci = r?.chunkInfo || {};
-      const md = ci.documentMetadata || {};
-      const sd = md.structData || {};
-      const uri = sd.ext_uri || md.uri || sd.uri || '';
-      const title = md.title || sd.title || uri || 'Source';
-      return { title, uri };
-    }).filter(x => x.uri);
-    return uniqBy(srcs, x => x.uri);
+  // Build a clean “Sources” list from Answer references
+  function normalizeReferences(refs) {
+    // Answer responses put URIs under documentMetadata.uri (often nested under chunkInfo)
+    // We'll look in a few common places and de-dupe by URI.
+    const items = [];
+    const seen = new Set();
+
+    (refs || []).forEach((r) => {
+      const dm = r?.documentMetadata || r?.chunkInfo?.documentMetadata || r?.document_metadata || {};
+      const uri = dm.uri || r?.uri || dm.link || '';
+      const title = dm.title || r?.title || uri || 'Source';
+      if (uri && !seen.has(uri)) {
+        seen.add(uri);
+        items.push({ uri, title });
+      }
+    });
+
+    return items;
   }
 
-  function renderResults(results = []) {
+  function renderResults(results) {
     resultsContainer.innerHTML = '';
-    if (!results.length) return;
-    resultsContainer.innerHTML = results.map(resultCard).join('');
+    const list = document.createElement('div');
+    const heading = document.createElement('h2');
+    heading.textContent = 'Results';
+    list.appendChild(heading);
+
+    if (!Array.isArray(results) || results.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'muted';
+      empty.textContent = 'No results.';
+      list.appendChild(empty);
+      resultsContainer.appendChild(list);
+      return;
+    }
+
+    results.forEach((r, i) => {
+      const { title, link, snippet } = normalizeResult(r, i);
+      const item = document.createElement('div');
+      item.className = 'result-item';
+
+      const titleEl = document.createElement('p');
+      titleEl.className = 'result-title';
+      if (link) {
+        const a = document.createElement('a');
+        a.href = link;
+        a.textContent = title;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'result-link';
+        titleEl.appendChild(a);
+      } else {
+        titleEl.textContent = title;
+      }
+
+      const snipEl = document.createElement('p');
+      snipEl.className = 'muted';
+      snipEl.textContent = snippet ? snippet.replace(/<[^>]*>/g, '') : '';
+
+      item.appendChild(titleEl);
+      if (snippet) item.appendChild(snipEl);
+      list.appendChild(item);
+    });
+
+    resultsContainer.appendChild(list);
   }
 
-  function renderAnswer(answerText, citations, references, answerHtml, answerSources) {
-    // Reset area
+  function renderAnswer(answerText, citations, references) {
     answerTextEl.textContent = '';
     sourcesListEl.innerHTML = '';
     sourcesHeadingEl.style.display = 'none';
 
-    // Prefer server-decorated HTML (with <sup class="cite"><a>[n]</a></sup>).
-    if (answerHtml && typeof answerHtml === 'string') {
-      answerTextEl.innerHTML = answerHtml;
-    } else {
-      const text = String(answerText || '').trim();
-      if (text) {
-        // Preserve line breaks from backend
-        answerTextEl.textContent = text;
-      } else {
-        answerTextEl.innerHTML = '<p class="muted">No answer text.</p>';
-      }
+    const text = String(answerText || '').trim();
+    if (!text) {
+      answerTextEl.innerHTML = '<p class="muted">No answer text.</p>';
+      return;
     }
 
-    // Prefer backend-provided numbered sources, else dedupe references
-    const sources = (Array.isArray(answerSources) && answerSources.length)
-      ? answerSources.map(s => ({ title: s.title || s.uri || 'Source', uri: s.uri }))
-      : normalizeReferences(references);
+    // Keep it simple & safe: show the answer text, then the numbered “Sources” below.
+    // (The Answer API’s citation ranges are byte offsets; for robust inline markers we’d
+    // need UTF-8 byte-aware slicing. The list below maps 1..N to reference URIs.)
+    answerTextEl.textContent = text;
 
-    if (sources.length) {
+    const refs = normalizeReferences(references);
+    if (refs.length) {
       sourcesHeadingEl.style.display = '';
-      for (const ref of sources) {
+      refs.forEach((ref, i) => {
         const li = document.createElement('li');
         const a = document.createElement('a');
         a.href = ref.uri;
@@ -105,48 +127,52 @@
         a.textContent = ref.title || ref.uri;
         li.appendChild(a);
         sourcesListEl.appendChild(li);
-      }
+      });
     }
   }
 
-  // --- Submit handler
+  async function fetchWithTimeout(url, opts = {}, ms = FETCH_TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      return res;
+    } finally {
+      clearTimeout(id);
+    }
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const q = input.value.trim();
+    const q = (input.value || '').trim();
     if (!q) return;
 
-    // UI: loading
+    // UI loading state
     btn.disabled = true;
     form.classList.add('loading');
-    resultsContainer.innerHTML = '';
-    answerTextEl.innerHTML = '<p class="muted">Thinking…</p>';
-    sourcesListEl.innerHTML = '';
+    resultsContainer.innerHTML = '<h2>Searching…</h2>';
+    answerTextEl.innerHTML = '';
     sourcesHeadingEl.style.display = 'none';
+    sourcesListEl.innerHTML = '';
 
     try {
-      const data = await withTimeout(FETCH_TIMEOUT_MS, (signal) =>
-        fetch(N8N_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q }),
-          mode: 'cors',
-          signal
-        }).then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-      );
+      const res = await fetchWithTimeout(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+      });
 
-      // Unpack with robust fallbacks
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // Defensive parsing: accept either the new shape (with citations) or old one.
       const results = data?.searchResults || data?.results || [];
-      const answerText = data?.generatedAnswer || data?.answer || data?.summary?.text || '';
+      const answerText = data?.generatedAnswer || data?.summary?.summaryText || '';
       const citations = data?.citations || data?.summary?.summaryWithMetadata?.citationMetadata?.citations || [];
       const references = data?.references || data?.summary?.summaryWithMetadata?.references || [];
-      const answerHtml = data?.generatedAnswerHtml || '';
-      const answerSources = data?.answerSources || [];
 
       renderResults(results);
-      renderAnswer(answerText, citations, references, answerHtml, answerSources);
+      renderAnswer(answerText, citations, references);
     } catch (err) {
       console.error(err);
       resultsContainer.innerHTML = '';
