@@ -1,18 +1,41 @@
-<body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Custom AI Search</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .muted { color:#666; font-size:.9rem; }
+      .sources { margin-top:12px; }
+      .sources li { margin: 6px 0; }
+      .error { color:#b00020; }
+      .loading { opacity:.7 }
+      .result-title { margin:.25rem 0; }
+      .answer-text { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
     <div class="search-container">
-        <h1>Custom AI Search</h1>
-        <form id="search-form">
-            <input type="text" id="search-input" placeholder="Search for something...">
-            <button type="submit">Search</button>
-        </form>
+      <h1>Custom AI Search</h1>
+      <form id="search-form" autocomplete="off">
+        <input type="text" id="search-input" placeholder="Search for something…" aria-label="Search" />
+        <button type="submit" id="search-btn">Search</button>
+      </form>
+      <p class="muted">Tip: the answer shows sources right under it.</p>
     </div>
-    
+
     <div id="response-wrapper">
-        <div id="results-container">
-            </div>
-        <div id="answer-container">
-            </div>
+      <div id="results-container"></div>
+      <div id="answer-container">
+        <h2>Answer</h2>
+        <div id="answer-text" class="answer-text"></div>
+        <h3 id="sources-heading" style="display:none;">Sources</h3>
+        <ol id="sources-list" class="sources"></ol>
+      </div>
     </div>
 
     <script src="script.js"></script>
-</body>
+  </body>
+</html>
