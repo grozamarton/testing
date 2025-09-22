@@ -37,7 +37,7 @@
     ]);
   };
 
-  // --- Results
+  // --- Rendering
   function resultCard(r) {
     const title = r.title || r.uri || 'Source';
     const uri = r.uri || r.link || '#';
@@ -45,21 +45,14 @@
     return `
       <article class="result">
         <h3 class="result-title"><a href="${esc(uri)}" target="_blank" rel="noopener">${esc(title)}</a></h3>
-        ${snippet ? `<p class="snippet" title="${esc(snippet)}">${esc(snippet)}</p>` : ''}
+        ${snippet ? `<p class="snippet">${esc(snippet)}</p>` : ''}
+        <div class="result-url">${esc(uri)}</div>
       </article>
     `;
   }
 
-  function renderResults(results = []) {
-    resultsContainer.innerHTML = '';
-    if (!results.length) return;
-    // De-dupe by final URL so the same paper doesn't appear twice
-    const unique = uniqBy(results, x => (x && (x.uri || x.link)) || '');
-    resultsContainer.innerHTML = unique.map(resultCard).join('');
-  }
-
-  // --- Sources fallback (if backend didn't send numbered list)
   function normalizeReferences(references) {
+    // Fallback when server doesn't send answerSources
     const srcs = (references || []).map(r => {
       const ci = r?.chunkInfo || {};
       const md = ci.documentMetadata || {};
@@ -71,22 +64,32 @@
     return uniqBy(srcs, x => x.uri);
   }
 
-  // --- Answer
+  function renderResults(results = []) {
+    resultsContainer.innerHTML = '';
+    if (!results.length) return;
+    resultsContainer.innerHTML = results.map(resultCard).join('');
+  }
+
   function renderAnswer(answerText, citations, references, answerHtml, answerSources) {
-    // Reset
+    // Reset area
     answerTextEl.textContent = '';
     sourcesListEl.innerHTML = '';
     sourcesHeadingEl.style.display = 'none';
 
-    // Prefer server-decorated HTML (contains <sup class="cite"><a>[n]</a></sup>)
+    // Prefer server-decorated HTML (with <sup class="cite"><a>[n]</a></sup>).
     if (answerHtml && typeof answerHtml === 'string') {
       answerTextEl.innerHTML = answerHtml;
     } else {
       const text = String(answerText || '').trim();
-      answerTextEl[text ? 'textContent' : 'innerHTML'] = text || '<p class="muted">No answer text.</p>';
+      if (text) {
+        // Preserve line breaks from backend
+        answerTextEl.textContent = text;
+      } else {
+        answerTextEl.innerHTML = '<p class="muted">No answer text.</p>';
+      }
     }
 
-    // Prefer the backend’s numbered list; fall back to deduped references
+    // Prefer backend-provided numbered sources, else dedupe references
     const sources = (Array.isArray(answerSources) && answerSources.length)
       ? answerSources.map(s => ({ title: s.title || s.uri || 'Source', uri: s.uri }))
       : normalizeReferences(references);
@@ -106,7 +109,7 @@
     }
   }
 
-  // --- Submit
+  // --- Submit handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const q = input.value.trim();
