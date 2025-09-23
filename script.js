@@ -38,18 +38,17 @@
   };
 
   // --- Rendering
-  function resultCard(r) {
-    const title = r.title || r.uri || 'Source';
-    const uri = r.uri || r.link || '#';
-    const snippet = r.snippet || r.content || '';
-    return `
-      <article class="result">
-        <h3 class="result-title"><a href="${esc(uri)}" target="_blank" rel="noopener">${esc(title)}</a></h3>
-        ${snippet ? `<p class="snippet">${esc(snippet)}</p>` : ''}
-        <div class="result-url">${esc(uri)}</div>
-      </article>
-    `;
-  }
+function resultCard(r) {
+  const title = r.title || r.uri || 'Source';
+  const uri = r.uri || r.link || '#';
+  const snippet = r.snippet || r.content || '';
+  return `
+    <article class="result">
+      <h3 class="result-title"><a href="${esc(uri)}" target="_blank" rel="noopener">${esc(title)}</a></h3>
+      ${snippet ? `<p class="snippet">${esc(snippet)}</p>` : ''}
+    </article>
+  `;
+}
 
   function normalizeReferences(references) {
     // Fallback when server doesn't send answerSources
