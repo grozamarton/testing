@@ -125,6 +125,7 @@ if (sources.length) {
     sourcesListEl.appendChild(li);
   }
 }
+}
   // --- Submit handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
