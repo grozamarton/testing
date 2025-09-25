@@ -42,9 +42,11 @@ function resultCard(r) {
   const title = r.title || r.uri || 'Source';
   const uri = r.uri || r.link || '#';
   const snippet = r.snippet || r.content || '';
+  const metaBits = [r.type, r.author, r.date].filter(Boolean).join(' • ');
   return `
     <article class="result">
       <h3 class="result-title"><a href="${esc(uri)}" target="_blank" rel="noopener">${esc(title)}</a></h3>
+      ${metaBits ? `<p class="meta">${esc(metaBits)}</p>` : ''}
       ${snippet ? `<p class="snippet">${esc(snippet)}</p>` : ''}
     </article>
   `;
@@ -89,25 +91,40 @@ function resultCard(r) {
     }
 
     // Prefer backend-provided numbered sources, else dedupe references
-    const sources = (Array.isArray(answerSources) && answerSources.length)
-      ? answerSources.map(s => ({ title: s.title || s.uri || 'Source', uri: s.uri }))
-      : normalizeReferences(references);
+const sources = (Array.isArray(answerSources) && answerSources.length)
+  ? answerSources.map(s => ({
+      title: s.title || s.uri || 'Source',
+      uri: s.uri,
+      // backend may send meta:{type,author,date}
+      meta: s.meta || null
+    }))
+  : normalizeReferences(references);
 
-    if (sources.length) {
-      sourcesHeadingEl.style.display = '';
-      for (const ref of sources) {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.href = ref.uri;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.textContent = ref.title || ref.uri;
-        li.appendChild(a);
-        sourcesListEl.appendChild(li);
-      }
+if (sources.length) {
+  sourcesHeadingEl.style.display = '';
+  for (const ref of sources) {
+    const li = document.createElement('li');
+
+    const a = document.createElement('a');
+    a.href = ref.uri;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = ref.title || ref.uri;
+    li.appendChild(a);
+
+    const metaBits = ref.meta
+      ? [ref.meta.type, ref.meta.author, ref.meta.date].filter(Boolean).join(' • ')
+      : '';
+    if (metaBits) {
+      const small = document.createElement('div');
+      small.className = 'meta';
+      small.textContent = metaBits;
+      li.appendChild(small);
     }
-  }
 
+    sourcesListEl.appendChild(li);
+  }
+}
   // --- Submit handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
